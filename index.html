@@ -230,10 +230,10 @@
   .rst .l { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
   /* insight card */
-  .ic-wrap { flex: 1; margin-top: 18px; position: relative; overflow: hidden; touch-action: pan-y; min-height: 320px; }
-  .ic-track { position: absolute; inset: 0; display: flex; gap: 14px; will-change: transform; transition: transform .42s cubic-bezier(.22,1.2,.36,1); }
+  .ic-wrap { margin-top: 18px; position: relative; overflow: hidden; touch-action: pan-y; }
+  .ic-track { display: flex; gap: 14px; will-change: transform; transition: transform .42s cubic-bezier(.22,1.2,.36,1); align-items: flex-start; }
   .ic-track.dragging { transition: none; }
-  .icd { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 22px; padding: 20px; flex: 0 0 100%; display: flex; flex-direction: column; user-select: none; }
+  .icd { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 22px; padding: 20px; flex: 0 0 100%; user-select: none; }
   .ic-head { display: flex; justify-content: space-between; align-items: start; }
   .cb { display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,0.06); font-size: 12px; font-weight: 500; }
   .cb .dt { width: 8px; height: 8px; border-radius: 50%; }
@@ -246,7 +246,7 @@
   .cmp .yrs { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--amber), var(--orange)); }
   .cmp .mk { position: absolute; top: -6px; width: 2px; height: 18px; background: var(--text-faint); }
   .cleg { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--text-faint); }
-  .iln { margin-top: auto; padding-top: 16px; font-size: 14px; line-height: 1.5; }
+  .iln { margin-top: 22px; font-size: 14px; line-height: 1.5; }
   .iln b { color: var(--amber); }
   .ilnk { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--violet); font-size: 13px; font-weight: 600; padding: 0; background: none; border: 0; }
 
