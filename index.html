@@ -1028,6 +1028,7 @@
     b.addEventListener('click', () => show(parseInt(b.dataset.i)));
   });
 
+  // primary delegated click handler (covers tap zones + buttons added later)
   document.addEventListener('click', (e) => {
     const goto = e.target.closest('[data-goto]');
     const next = e.target.closest('[data-next]');
@@ -1037,6 +1038,20 @@
     else if (next) { killStoryTimer(); show(Math.min(current + 1, TOTAL - 1)); }
     else if (prev) { killStoryTimer(); show(Math.max(current - 1, 0)); }
     else if (skip) { killStoryTimer(); show(5); }
+  });
+
+  // direct handlers on every flow control as belt-and-suspenders
+  document.querySelectorAll('[data-next]').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); killStoryTimer(); show(Math.min(current + 1, TOTAL - 1)); });
+  });
+  document.querySelectorAll('[data-prev]').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); killStoryTimer(); show(Math.max(current - 1, 0)); });
+  });
+  document.querySelectorAll('[data-skip]').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); killStoryTimer(); show(5); });
+  });
+  document.querySelectorAll('[data-goto]').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); killStoryTimer(); const t = parseInt(el.dataset.goto); if (!isNaN(t)) show(t); });
   });
 
   document.querySelectorAll('[data-chip]').forEach(c => {
