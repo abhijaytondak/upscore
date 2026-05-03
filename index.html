@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0A0F" />
+<title>UPScore · Full Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0A0A0F;
+    --surface-1: #14141B;
+    --surface-2: #1C1C24;
+    --surface-3: #232330;
+    --hairline: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.16);
+    --text: #F5F5F7;
+    --text-muted: #9A9AA3;
+    --text-faint: #5A5A63;
+    --violet: #6B4CE6;
+    --violet-deep: #3B30FF;
+    --amber: #FFB938;
+    --pink: #FF5BA3;
+    --lime: #D4FF3A;
+    --cyan: #3FE0C8;
+    --green: #4ADE80;
+    --orange: #FF7A1A;
+    --red: #FF4D6B;
+    --font-display: "Geist", system-ui, sans-serif;
+    --font-serif: "Instrument Serif", "Times New Roman", serif;
+    --font-body: "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: #050507; color: var(--text); font-family: var(--font-body); }
+  body {
+    overflow: hidden; display: grid; place-items: center;
+    background: radial-gradient(800px 500px at 30% 20%, rgba(107,76,230,0.08), transparent 60%), radial-gradient(700px 500px at 70% 80%, rgba(255,185,56,0.05), transparent 60%), #050507;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .stage {
+    width: 390px; height: 844px; position: relative; overflow: hidden;
+    background: var(--bg); border-radius: 48px;
+    box-shadow: 0 0 0 12px #1a1a1f, 0 0 0 13px #2a2a30, 0 60px 120px -30px rgba(107,76,230,0.4), 0 100px 200px -50px rgba(0,0,0,0.8);
+  }
+  @media (max-width: 430px) { .stage { width: 100vw; height: 100vh; border-radius: 0; box-shadow: none; } }
+
+  .screen {
+    position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    display: flex; flex-direction: column; transform: translateX(40px);
+    transition: opacity .35s ease, transform .4s cubic-bezier(.2,.9,.25,1);
+  }
+  .screen.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
+
+  .atmos { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(40px); }
+  .gv { width: 480px; height: 480px; left: -100px; top: -120px; background: radial-gradient(circle, rgba(107,76,230,0.55) 0%, transparent 70%); animation: br1 7s ease-in-out infinite; }
+  .ga { width: 360px; height: 360px; right: -80px; top: 280px; background: radial-gradient(circle, rgba(255,185,56,0.32) 0%, transparent 70%); animation: br2 8s ease-in-out infinite; }
+  .gp { width: 300px; height: 300px; left: 30%; bottom: -80px; background: radial-gradient(circle, rgba(255,91,163,0.22) 0%, transparent 70%); animation: br3 9s ease-in-out infinite; }
+  .gc { width: 320px; height: 320px; right: -60px; top: -80px; background: radial-gradient(circle, rgba(63,224,200,0.28) 0%, transparent 70%); animation: br2 10s ease-in-out infinite; }
+  @keyframes br1 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.9} 50%{transform:translate(20px,40px) scale(1.08);opacity:1} }
+  @keyframes br2 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.85} 50%{transform:translate(-30px,-20px) scale(1.1);opacity:1} }
+  @keyframes br3 { 0%,100%{transform:translate(0,0) scale(1);opacity:0.7} 50%{transform:translate(40px,-30px) scale(1.05);opacity:1} }
+  .grain { position: absolute; inset: 0; opacity: 0.04; mix-blend-mode: overlay; pointer-events: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+  .grid-bg { position: absolute; inset: 0; pointer-events: none; opacity: 0.5; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 30%, transparent 90%); }
+
+  .pad { padding: 12px 22px 28px; height: 100%; display: flex; flex-direction: column; position: relative; z-index: 2; }
+  .status { display: flex; justify-content: space-between; align-items: center; height: 22px; font-size: 13px; font-weight: 600; padding: 0 8px; }
+  .status .icons { display: flex; gap: 5px; align-items: center; opacity: 0.95; }
+
+  .pbars { margin-top: 14px; display: flex; gap: 4px; }
+  .seg { flex: 1; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,0.18); overflow: hidden; position: relative; }
+  .seg .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--text); border-radius: 2px; }
+  .seg.done .fill { width: 100%; }
+  .seg.active .fill { width: 50%; }
+
+  .head { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+  .wm { font-family: var(--font-display); font-size: 15px; font-weight: 300; letter-spacing: -0.01em; display: inline-flex; align-items: center; gap: 6px; }
+  .wm b { font-weight: 700; }
+  .glyph { width: 16px; height: 16px; border-radius: 5px; background: linear-gradient(135deg, var(--violet-deep), var(--violet) 60%, var(--amber)); box-shadow: 0 0 16px rgba(107,76,230,0.5); }
+  .ib { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid var(--hairline); display: grid; place-items: center; color: var(--text); transition: background .2s, transform .15s; }
+  .ib:hover { background: rgba(255,255,255,0.12); }
+  .ib:active { transform: scale(0.94); }
+
+  .h-disp { font-family: var(--font-display); font-weight: 300; line-height: 1.05; letter-spacing: -0.035em; color: var(--text); }
+  .h-disp b { font-weight: 800; background: linear-gradient(180deg, #FFFFFF 0%, #C9C9D2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .h-disp i, .h-disp .ac { font-family: var(--font-serif); font-style: italic; font-weight: 400; background: linear-gradient(180deg, #FFD37A 0%, #FFB938 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 1px; }
+  .h-disp .qt { font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--text-muted); }
+  .sub { color: var(--text-muted); font-size: 14.5px; line-height: 1.5; }
+  .eyebrow { color: var(--text-faint); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 500; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 22px; border-radius: 999px; border: 0; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; transition: transform .15s, box-shadow .2s; }
+  .btn-v { background: var(--violet); color: #fff; box-shadow: 0 12px 40px -10px rgba(107,76,230,0.7); }
+  .btn-v:hover { background: #7d5ff0; transform: translateY(-1px); }
+  .btn-g { background: rgba(255,255,255,0.04); color: var(--text); border: 1px solid var(--border); }
+  .btn-g:hover { background: rgba(255,255,255,0.08); }
+
+  .hero { flex: 1 1 auto; min-height: 0; margin-top: 18px; display: grid; place-items: center; position: relative; }
+  .copy { margin-top: 12px; padding: 0 4px; }
+  .copy h1 { font-size: 38px; line-height: 1.05; }
+  .copy .sub { margin-top: 14px; max-width: 30ch; }
+
+  .foot { margin-top: 22px; display: flex; justify-content: space-between; align-items: center; color: var(--text-faint); font-size: 12px; }
+  .tip { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.02em; }
+  .tip .arr { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+  @keyframes nudge { 0%,100%{transform:translateX(0);opacity:0.6} 50%{transform:translateX(4px);opacity:1} }
+  .skip { color: var(--text-faint); font-size: 12px; padding: 6px 10px; border-radius: 999px; background: transparent; border: 0; }
+
+  /* gauge S1 */
+  .gauge { position: relative; width: 280px; height: 280px; animation: floaty 6s ease-in-out infinite; }
+  @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .gauge svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .gauge .spin { transform-origin: 50% 50%; animation: rotate 12s linear infinite; }
+  @keyframes rotate { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .gc-text { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .gc-text .t1 { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; position: absolute; top: 78px; left: 0; right: 0; }
+  .gc-text .q { font-family: var(--font-display); font-size: 124px; font-weight: 800; letter-spacing: -0.06em; line-height: 1; background: linear-gradient(180deg, #FFFFFF 0%, #6B4CE6 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: blur(2px); animation: jit 2.4s ease-in-out infinite; }
+  @keyframes jit { 0%,100%{filter:blur(2px);transform:scale(1)} 50%{filter:blur(4px);transform:scale(1.02)} }
+  .gc-text .t2 { position: absolute; bottom: 80px; left: 0; right: 0; font-size: 11px; color: var(--text-muted); font-weight: 500; }
+  .gc-text .t2 span { color: var(--amber); font-weight: 600; }
+
+  /* S2 big number */
+  .big-n { font-family: var(--font-display); font-weight: 800; font-size: 180px; line-height: 0.9; letter-spacing: -0.06em; background: linear-gradient(180deg, #FFFFFF 0%, #FFB938 100%); -webkit-background-clip: text; background-clip: text; color: transparent; text-align: center; position: relative; }
+  .big-n::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(255,185,56,0.4) 0%, transparent 65%); z-index: -1; filter: blur(20px); }
+  .of { font-family: var(--font-display); color: var(--text-muted); font-weight: 500; font-size: 18px; margin-top: 4px; text-align: center; }
+
+  /* S3 bars */
+  .bars { display: flex; gap: 18px; align-items: end; height: 230px; padding: 0 8px; }
+  .bcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bcol .b { width: 100%; border-radius: 12px 12px 4px 4px; position: relative; overflow: hidden; }
+  .bcol .b.peers { background: var(--surface-3); }
+  .bcol .b.comp { background: #3a3a48; }
+  .bcol .b.you { background: linear-gradient(180deg, #FFD37A, #FFB938 60%, #B97A14); box-shadow: 0 0 30px rgba(255,185,56,0.45); animation: pY 2.4s ease-in-out infinite; }
+  @keyframes pY { 0%,100%{box-shadow:0 0 30px rgba(255,185,56,0.45)} 50%{box-shadow:0 0 50px rgba(255,185,56,0.7)} }
+  .bcol .b .v { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: rgba(0,0,0,0.6); }
+  .bcol .b.peers .v, .bcol .b.comp .v { color: rgba(255,255,255,0.6); }
+  .bcol .l { font-size: 11px; color: var(--text-faint); text-align: center; line-height: 1.3; }
+  .bcol.you .l { color: var(--amber); font-weight: 600; }
+
+  /* S5 coin stack */
+  .coins { position: relative; width: 220px; height: 220px; margin: 0 auto; animation: floaty 5s ease-in-out infinite; }
+  .cn { position: absolute; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #FFE9A8 0%, #FFB938 35%, #B97A14 75%, #6E4408 100%); box-shadow: 0 18px 40px -8px rgba(255,185,56,0.55), inset -10px -16px 24px rgba(0,0,0,0.4), inset 6px 6px 14px rgba(255,255,255,0.3); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; color: rgba(110,68,8,0.7); text-shadow: 0 1px 2px rgba(255,255,255,0.4); }
+  .cn1 { width: 130px; height: 130px; left: 45px; top: 45px; transform: rotate(-8deg); z-index: 3; font-size: 38px; }
+  .cn2 { width: 90px; height: 90px; left: 0; top: 90px; transform: rotate(-20deg); z-index: 2; opacity: 0.85; font-size: 28px; }
+  .cn3 { width: 100px; height: 100px; right: 0; top: 30px; transform: rotate(15deg); z-index: 2; opacity: 0.9; font-size: 30px; }
+
+  /* trust list */
+  .tlist { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+  .titem { display: flex; gap: 12px; padding: 14px; background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 16px; }
+  .titem .ic { width: 38px; height: 38px; border-radius: 11px; flex: 0 0 auto; background: rgba(107,76,230,0.14); border: 1px solid rgba(107,76,230,0.25); display: grid; place-items: center; color: var(--violet); }
+  .titem.am .ic { background: rgba(255,185,56,0.14); border-color: rgba(255,185,56,0.25); color: var(--amber); }
+  .titem.gn .ic { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.25); color: var(--green); }
+  .titem.cy .ic { background: rgba(63,224,200,0.14); border-color: rgba(63,224,200,0.25); color: var(--cyan); }
+  .titem h5 { font-size: 14px; font-weight: 600; }
+  .titem p { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+
+  /* question flow */
+  .qprog { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
+  .qprog .tr { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+  .qprog .tr .fl { height: 100%; background: linear-gradient(90deg, var(--violet) 0%, var(--amber) 100%); border-radius: 999px; transition: width .5s; }
+  .qprog .n { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+  .qe { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--hairline); font-size: 11px; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+  .qq { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1.15; letter-spacing: -0.025em; margin-top: 14px; }
+  .qq b { font-weight: 800; }
+  .qq i { font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--amber); }
+  .qw { margin-top: 12px; padding: 12px 14px; background: rgba(107,76,230,0.08); border: 1px solid rgba(107,76,230,0.18); border-radius: 12px; display: flex; gap: 10px; align-items: start; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+  .qw .wi { color: var(--violet); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .qw b { color: var(--text); font-weight: 600; }
+
+  .sd { margin-top: 32px; text-align: center; }
+  .sd .num { font-family: var(--font-display); font-weight: 800; font-size: 64px; letter-spacing: -0.04em; line-height: 1; background: linear-gradient(180deg, #FFFFFF 0%, #C9C9D2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sd .cur { color: var(--text-muted); font-weight: 600; }
+  .sd .l { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; }
+  .stwrap { margin-top: 28px; padding: 0 6px; }
+  .stk { position: relative; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; touch-action: none; cursor: pointer; }
+  .stk::before { content: ""; position: absolute; left: -8px; right: -8px; top: -16px; bottom: -16px; }
+  .sfill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, var(--violet), var(--amber)); border-radius: 999px; transition: width .08s linear; will-change: width; }
+  .sthumb { position: absolute; top: 50%; width: 28px; height: 28px; border-radius: 50%; background: white; box-shadow: 0 4px 16px rgba(107,76,230,0.4), 0 0 0 4px rgba(107,76,230,0.2); transform: translate(-50%,-50%) scale(1); transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .2s; will-change: transform, left; }
+  .stk.dragging .sthumb { transform: translate(-50%,-50%) scale(1.18); box-shadow: 0 6px 22px rgba(107,76,230,0.55), 0 0 0 6px rgba(107,76,230,0.28); }
+  .stk.dragging .sfill { transition: none; }
+  .sbnd { display: flex; justify-content: space-between; margin-top: 12px; font-size: 11px; color: var(--text-faint); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .chip { padding: 10px 16px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--hairline); color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+  .chip:hover { background: rgba(255,255,255,0.08); border-color: var(--border-strong); }
+  .chip.on { background: rgba(107,76,230,0.18); border-color: rgba(107,76,230,0.5); color: white; }
+  .chip.on::before { content: "✓"; font-size: 11px; color: var(--amber); }
+
+  .sgr { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+  .sgr .sl { font-size: 12px; color: var(--text-muted); padding: 0 4px; margin-bottom: 4px; }
+  .sgr .so { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .qf { margin-top: auto; display: flex; gap: 10px; padding-top: 18px; }
+  .qf .bk { width: 48px; padding: 0; aspect-ratio: 1; border-radius: 50%; }
+
+  /* loader */
+  .lring { width: 280px; height: 280px; position: relative; margin: 0 auto; }
+  .lring svg { width: 100%; height: 100%; }
+  .lring .ct { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .lring .pct { font-family: var(--font-display); font-weight: 800; font-size: 64px; letter-spacing: -0.04em; background: linear-gradient(180deg, #FFFFFF 0%, #6B4CE6 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lmsgs { margin-top: 36px; text-align: center; min-height: 60px; position: relative; }
+  .lmsg { position: absolute; left: 0; right: 0; font-size: 16px; color: var(--text); opacity: 0; animation: cyc 12s infinite; }
+  .lmsg:nth-child(1) { animation-delay: 0s; }
+  .lmsg:nth-child(2) { animation-delay: 3s; }
+  .lmsg:nth-child(3) { animation-delay: 6s; }
+  .lmsg:nth-child(4) { animation-delay: 9s; }
+  @keyframes cyc { 0%{opacity:0;transform:translateY(8px)} 8%{opacity:1;transform:translateY(0)} 25%{opacity:1;transform:translateY(0)} 33%{opacity:0;transform:translateY(-8px)} 100%{opacity:0;transform:translateY(-8px)} }
+  .lsub { margin-top: 10px; text-align: center; font-size: 12px; color: var(--text-faint); }
+
+  /* reveal */
+  .rev { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .reb { text-align: center; font-size: 12px; color: var(--amber); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; }
+  .rnum { font-family: var(--font-display); font-weight: 800; font-size: 200px; line-height: 0.85; letter-spacing: -0.07em; text-align: center; margin-top: 8px; background: linear-gradient(180deg, #FFFFFF 0%, #FFB938 60%, #6B4CE6 100%); -webkit-background-clip: text; background-clip: text; color: transparent; position: relative; animation: pop 1.2s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes pop { from{opacity:0;transform:scale(0.6);filter:blur(20px)} to{opacity:1;transform:scale(1);filter:blur(0)} }
+  .rnum::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255,185,56,0.35) 0%, rgba(107,76,230,0.25) 40%, transparent 70%); z-index: -1; filter: blur(10px); }
+  .rof { font-family: var(--font-display); color: var(--text-muted); font-size: 18px; margin-top: 4px; text-align: center; font-weight: 500; }
+  .rtag { margin-top: 28px; text-align: center; font-family: var(--font-display); font-size: 22px; line-height: 1.25; letter-spacing: -0.02em; font-weight: 300; padding: 0 20px; }
+  .rtag b { font-weight: 800; }
+  .rtag i { font-family: var(--font-serif); font-style: italic; color: var(--amber); }
+  .rstrow { margin-top: 18px; display: flex; justify-content: center; gap: 12px; }
+  .rst { text-align: center; padding: 10px 14px; background: rgba(255,255,255,0.04); border: 1px solid var(--hairline); border-radius: 12px; }
+  .rst .v { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+  .rst .l { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* insight card */
+  .ic-wrap { flex: 1; margin-top: 18px; position: relative; overflow: hidden; touch-action: pan-y; min-height: 320px; }
+  .ic-track { position: absolute; inset: 0; display: flex; gap: 14px; will-change: transform; transition: transform .42s cubic-bezier(.22,1.2,.36,1); }
+  .ic-track.dragging { transition: none; }
+  .icd { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 22px; padding: 20px; flex: 0 0 100%; display: flex; flex-direction: column; user-select: none; }
+  .ic-head { display: flex; justify-content: space-between; align-items: start; }
+  .cb { display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,0.06); font-size: 12px; font-weight: 500; }
+  .cb .dt { width: 8px; height: 8px; border-radius: 50%; }
+  .dlt { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; background: rgba(255,77,107,0.14); color: var(--red); }
+  .dlt.good { background: rgba(74,222,128,0.14); color: var(--green); }
+  .yn { font-family: var(--font-display); font-weight: 800; font-size: 42px; letter-spacing: -0.04em; line-height: 1; margin-top: 16px; }
+  .yn small { font-size: 18px; color: var(--text-muted); font-weight: 500; }
+  .yl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .cmp { margin-top: 18px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; position: relative; }
+  .cmp .yrs { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--amber), var(--orange)); }
+  .cmp .mk { position: absolute; top: -6px; width: 2px; height: 18px; background: var(--text-faint); }
+  .cleg { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--text-faint); }
+  .iln { margin-top: auto; padding-top: 16px; font-size: 14px; line-height: 1.5; }
+  .iln b { color: var(--amber); }
+  .ilnk { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--violet); font-size: 13px; font-weight: 600; padding: 0; background: none; border: 0; }
+
+  .ddots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+  .ddt { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+  .ddt.on { background: var(--text); width: 18px; border-radius: 999px; }
+
+  /* missions */
+  .mlist { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+  .ms { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 18px; padding: 16px; display: flex; gap: 14px; align-items: start; transition: all .2s; }
+  .ms:hover { border-color: var(--border-strong); transform: translateX(2px); }
+  .nc { width: 36px; height: 36px; border-radius: 50%; flex: 0 0 auto; background: var(--amber); color: #1a1200; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 16px; }
+  .ms .body { flex: 1; }
+  .ms h6 { font-size: 14.5px; font-weight: 600; line-height: 1.3; }
+  .mt { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+  .mp { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .mp.sc { background: rgba(74,222,128,0.14); color: var(--green); }
+  .mp.rw { background: rgba(255,185,56,0.14); color: var(--amber); }
+  .mp.df { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+  .acc { width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto; background: rgba(255,255,255,0.06); border: 1px solid var(--hairline); display: grid; place-items: center; color: var(--text); transition: all .2s; }
+  .acc:hover { background: var(--violet); border-color: var(--violet); }
+
+  /* permissions */
+  .psh { margin: 12px auto 0; width: 130px; height: 130px; border-radius: 32px; background: radial-gradient(circle at 30% 30%, rgba(107,76,230,0.5), rgba(59,48,255,0.3) 60%, transparent 80%); display: grid; place-items: center; position: relative; }
+  .psh::before { content: ""; position: absolute; inset: 0; border-radius: 32px; background: radial-gradient(circle, rgba(107,76,230,0.4) 0%, transparent 70%); filter: blur(20px); z-index: -1; }
+  .pps { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .pp { display: flex; gap: 10px; align-items: start; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--hairline); border-radius: 14px; }
+  .pp .dot { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto; background: rgba(74,222,128,0.18); color: var(--green); display: grid; place-items: center; font-size: 11px; }
+  .pp .t { font-size: 13.5px; font-weight: 500; }
+  .pp .s { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .zones { position: absolute; inset: 0; z-index: 3; display: flex; }
+  .zn { height: 100%; }
+  .zn.l  { flex: 0 0 30%; }
+  .zn.r { flex: 1; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; background: rgba(255,255,255,0.6); border-radius: 3px; z-index: 5; }
+
+  /* picker */
+  .picker { position: fixed; left: 16px; top: 16px; z-index: 100; background: rgba(20,20,27,0.92); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 2px; max-height: 92vh; overflow: auto; }
+  .picker .pt { font-size: 10px; color: var(--text-faint); padding: 6px 8px 2px; text-transform: uppercase; letter-spacing: 0.1em; }
+  .picker button { background: transparent; border: 0; color: var(--text-muted); padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; text-align: left; min-width: 160px; font-family: var(--font-body); }
+  .picker button:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .picker button.on { background: var(--violet); color: white; }
+
+  /* shared status icons - reusable mark */
+  .si { display: flex; gap: 5px; align-items: center; opacity: 0.95; }
+</style>
+</head>
+<body>
+
+<div class="picker" id="picker">
+  <div class="pt">stories</div>
+  <button data-i="0">S1 — The Hook</button>
+  <button data-i="1">S2 — The Metric</button>
+  <button data-i="2">S3 — Aha (peers)</button>
+  <button data-i="3">S4 — Solutions</button>
+  <button data-i="4">S5 — Rewards</button>
+  <div class="pt">trust</div>
+  <button data-i="5">Trust Layer</button>
+  <div class="pt">questions</div>
+  <button data-i="6">Q1 Income</button>
+  <button data-i="7">Q2 Fixed</button>
+  <button data-i="8">Q3 Lifestyle</button>
+  <button data-i="9">Q4 Identity</button>
+  <div class="pt">result</div>
+  <button data-i="10">Loading</button>
+  <button data-i="11">Score Reveal</button>
+  <button data-i="12">Insights</button>
+  <button data-i="13">Missions</button>
+  <button data-i="14">Permissions</button>
+</div>
+
+<div class="stage" id="stage">
+
+<!-- shared: status bar SVGs to inline -->
+<template id="t-status">
+  <div class="status">
+    <span>9:41</span>
+    <span class="si">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg>
+      <svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg>
+    </span>
+  </div>
+</template>
+
+<!-- ============ S1 HOOK ============ -->
+<section class="screen active" data-screen="0">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv"></div><div class="glow ga"></div><div class="glow gp"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="pbars"><div class="seg active"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="hero">
+      <div class="gauge">
+        <svg viewBox="0 0 280 280">
+          <defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6B4CE6"/><stop offset="50%" stop-color="#FF5BA3"/><stop offset="100%" stop-color="#FFB938"/></linearGradient></defs>
+          <circle cx="140" cy="140" r="130" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <g class="spin">
+            <circle cx="140" cy="140" r="115" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+            <circle cx="140" cy="140" r="115" fill="none" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="20 12 60 18 90 14 30 16 80 22 60 14 30 12 60 22"/>
+          </g>
+          <g class="ticks-s1"></g>
+        </svg>
+        <div class="gc-text"><div class="t1">your score</div><div class="q">??</div><div class="t2"><span>●</span> calculating in 60 seconds</div></div>
+      </div>
+    </div>
+    <div class="copy">
+      <h1 class="h-disp"><span class="qt">'doing okay'</span> isn't a <span class="ac">score.</span><br/>we'll give you <b>one.</b></h1>
+      <p class="sub">60 seconds. one number. zero judgement —<br/>find out where you actually stand.</p>
+    </div>
+    <div class="foot"><span class="tip">tap to continue <span class="arr">→</span></span><button class="skip" data-skip>skip</button></div>
+  </div>
+  <div class="zones"><div class="zn l" data-prev></div><div class="zn r" data-next></div></div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ S2 METRIC ============ -->
+<section class="screen" data-screen="1">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="left:50%;top:30%;transform:translate(-50%,-50%);width:500px;height:500px;"></div><div class="glow gv" style="opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="pbars"><div class="seg done"><div class="fill"></div></div><div class="seg active"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="hero">
+      <div style="text-align: center;">
+        <div class="eyebrow" style="margin-bottom: 18px;">your upscore — example</div>
+        <div class="big-n">62</div>
+        <div class="of">out of 100</div>
+        <div style="margin-top: 22px; display: inline-flex; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.25); color: var(--green); font-size: 12px; font-weight: 600;">↑ doing better than 67% of peers</div>
+      </div>
+    </div>
+    <div class="copy">
+      <h1 class="h-disp" style="font-size: 36px;">one number for the thing you keep <span class="ac">guessing</span> at.</h1>
+      <p class="sub">your habits, scored on what actually matters —<br/>income, expenses, savings, lifestyle.</p>
+    </div>
+    <div class="foot"><span class="tip">tap to continue <span class="arr">→</span></span><button class="skip" data-skip>skip</button></div>
+  </div>
+  <div class="zones"><div class="zn l" data-prev></div><div class="zn r" data-next></div></div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ S3 AHA / PEERS ============ -->
+<section class="screen" data-screen="2">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="top:40%;right:-100px;"></div><div class="glow gv" style="opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="pbars"><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg active"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="hero" style="align-items: end;">
+      <div style="width: 100%; padding: 0 6px;">
+        <div class="eyebrow" style="text-align: center; margin-bottom: 18px;">monthly food spending</div>
+        <div class="bars">
+          <div class="bcol"><div class="b peers" style="height: 50%;"><div class="v">₹9,000</div></div><div class="l">people<br/>like you</div></div>
+          <div class="bcol"><div class="b comp" style="height: 62%;"><div class="v">₹10,500</div></div><div class="l">your<br/>company</div></div>
+          <div class="bcol you"><div class="b you" style="height: 88%;"><div class="v">₹13,500</div></div><div class="l">you</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <h1 class="h-disp" style="font-size: 32px;">you spend <span class="ac">50% more</span> on food than people like you.</h1>
+      <p class="sub">we compare you to peers — same income, same city, same life stage. quietly.</p>
+    </div>
+    <div class="foot"><span class="tip">tap to continue <span class="arr">→</span></span><button class="skip" data-skip>skip</button></div>
+  </div>
+  <div class="zones"><div class="zn l" data-prev></div><div class="zn r" data-next></div></div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ S4 SOLUTIONS ============ -->
+<section class="screen" data-screen="3">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow" style="width:400px;height:400px;left:50%;top:30%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(74,222,128,0.25),transparent 70%);"></div><div class="glow gv" style="opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="pbars"><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg active"><div class="fill"></div></div><div class="seg"><div class="fill"></div></div></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="hero">
+      <div style="width: 100%; text-align: center;">
+        <svg viewBox="0 0 320 220" style="width: 100%; max-width: 320px;">
+          <defs>
+            <linearGradient id="cg" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF4D6B"/><stop offset="50%" stop-color="#FFB938"/><stop offset="100%" stop-color="#4ADE80"/></linearGradient>
+            <linearGradient id="cf" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(74,222,128,0.4)"/><stop offset="100%" stop-color="rgba(74,222,128,0)"/></linearGradient>
+          </defs>
+          <line x1="0" y1="180" x2="320" y2="180" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4"/>
+          <line x1="0" y1="120" x2="320" y2="120" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4"/>
+          <line x1="0" y1="60" x2="320" y2="60" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4"/>
+          <path d="M 20 170 C 70 165, 110 150, 150 120 S 230 60, 300 30 L 300 200 L 20 200 Z" fill="url(#cf)"/>
+          <path d="M 20 170 C 70 165, 110 150, 150 120 S 230 60, 300 30" fill="none" stroke="url(#cg)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="20" cy="170" r="6" fill="#FF4D6B"/><circle cx="20" cy="170" r="12" fill="#FF4D6B" opacity="0.2"/>
+          <text x="20" y="195" text-anchor="middle" fill="#FF4D6B" font-family="Geist,sans-serif" font-weight="700" font-size="14">62</text>
+          <circle cx="300" cy="30" r="6" fill="#4ADE80"/><circle cx="300" cy="30" r="12" fill="#4ADE80" opacity="0.2"/>
+          <text x="300" y="20" text-anchor="middle" fill="#4ADE80" font-family="Geist,sans-serif" font-weight="700" font-size="14">84</text>
+          <text x="300" y="55" text-anchor="middle" fill="#9A9AA3" font-family="Geist,sans-serif" font-size="10">in 6 mo</text>
+        </svg>
+      </div>
+    </div>
+    <div class="copy">
+      <h1 class="h-disp" style="font-size: 36px;">small <span class="ac">swaps.</span> big gains. <b>no spreadsheets.</b></h1>
+      <p class="sub">we'll suggest tweaks based on your real spend. you decide what sticks.</p>
+    </div>
+    <div class="foot"><span class="tip">tap to continue <span class="arr">→</span></span><button class="skip" data-skip>skip</button></div>
+  </div>
+  <div class="zones"><div class="zn l" data-prev></div><div class="zn r" data-next></div></div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ S5 REWARDS + CTA ============ -->
+<section class="screen" data-screen="4">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="left:50%;top:35%;transform:translate(-50%,-50%);width:520px;height:520px;opacity:0.6;"></div><div class="glow gv" style="opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="pbars"><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg done"><div class="fill"></div></div><div class="seg active"><div class="fill"></div></div></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="hero">
+      <div class="coins"><div class="cn cn2">₹</div><div class="cn cn3">★</div><div class="cn cn1">₹</div></div>
+    </div>
+    <div class="copy" style="text-align: center;">
+      <h1 class="h-disp" style="font-size: 36px; text-align: center;">every habit earns you something <span class="ac">real.</span></h1>
+      <p class="sub" style="text-align: center; margin: 14px auto 0;">fix one habit, unlock ₹500. fix three, unlock ₹2,000 + premium for a year.</p>
+    </div>
+    <div style="margin-top: 18px;"><button class="btn btn-v" data-next>see my upscore <span style="font-size: 18px;">→</span></button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ TRUST LAYER ============ -->
+<section class="screen" data-screen="5">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv" style="opacity:0.5;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button></div>
+    <div style="margin-top: 28px;">
+      <div class="eyebrow">before we start</div>
+      <h1 class="h-disp" style="font-size: 36px; margin-top: 10px;">60 seconds.<br/>four <b>questions.</b><br/><span class="qt">zero spam.</span></h1>
+      <p class="sub" style="margin-top: 12px;">here's exactly what's about to happen.</p>
+    </div>
+    <div class="tlist">
+      <div class="titem"><div class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="9" r="7"/><path d="M9 5 L9 9 L12 11"/></svg></div><div><h5>this'll take 60 seconds</h5><p>four short questions about your salary, expenses, and lifestyle. no documents.</p></div></div>
+      <div class="titem am"><div class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 9 L7 13 L15 5"/></svg></div><div><h5>why we ask</h5><p>to compare you with the right peers — same income band, same city, same life stage.</p></div></div>
+      <div class="titem gn"><div class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 1 L2 4 V9 C2 13 5 15.5 9 17 C13 15.5 16 13 16 9 V4 Z"/></svg></div><div><h5>your data stays yours</h5><p>encrypted end-to-end. never sold. delete anytime — no questions, no follow-ups.</p></div></div>
+      <div class="titem cy"><div class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="6" r="3"/><path d="M3 16 C3 12 6 10 9 10 C12 10 15 12 15 16"/></svg></div><div><h5>only you see your score</h5><p>not your bank, not your employer. your number, your call.</p></div></div>
+    </div>
+    <div style="margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+      <button class="btn btn-v" data-next>i'm ready — let's go</button>
+      <p style="text-align: center; font-size: 11px; color: var(--text-faint);">by continuing you agree to our <span style="text-decoration: underline; cursor: pointer;">privacy notice</span></p>
+    </div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ Q1 INCOME ============ -->
+<section class="screen" data-screen="6">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv" style="opacity:0.35;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-skip><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="qprog"><div class="tr"><div class="fl" style="width: 25%;"></div></div><span class="n">1 / 4</span></div>
+    <div style="margin-top: 24px;">
+      <span class="qe">income</span>
+      <h2 class="qq">what's your monthly <i>take-home?</i></h2>
+      <div class="qw"><span class="wi">●</span><span><b>why we ask</b> — to compare you with the right income band. we don't share this with anyone.</span></div>
+    </div>
+    <div class="sd"><div class="num"><span class="cur">₹</span><span data-income-num>75,000</span></div><div class="l">per month, after tax</div></div>
+    <div class="stwrap"><div class="stk" data-slider="income" data-min="30000" data-max="300000" data-step="1000" data-value="75000"><div class="sfill"></div><div class="sthumb"></div></div><div class="sbnd"><span>₹30k</span><span>₹3L+</span></div></div>
+    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-next>continue</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ Q2 FIXED EXPENSES ============ -->
+<section class="screen" data-screen="7">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="opacity:0.3;left:auto;right:-100px;top:60%;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-skip><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="qprog"><div class="tr"><div class="fl" style="width: 50%;"></div></div><span class="n">2 / 4</span></div>
+    <div style="margin-top: 24px;">
+      <span class="qe">fixed expenses</span>
+      <h2 class="qq">rent + EMIs eat <i>about</i> how much?</h2>
+      <div class="qw"><span class="wi">●</span><span><b>why we ask</b> — fixed costs shape what you can flex. higher = less room to save.</span></div>
+    </div>
+    <div class="sd"><div class="num"><span data-fixed-num>35</span><span class="cur">%</span></div><div class="l" data-fixed-derived>~ ₹26,250 of your ₹75,000 / month</div></div>
+    <div class="stwrap"><div class="stk" data-slider="fixed" data-min="0" data-max="80" data-step="1" data-value="35"><div class="sfill"></div><div class="sthumb"></div></div><div class="sbnd"><span>0%</span><span style="color:var(--green);">↓ healthy ≤ 30%</span><span>80%</span></div></div>
+    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-next>continue</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ Q3 LIFESTYLE ============ -->
+<section class="screen" data-screen="8">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gp" style="top:40%;opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-skip><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="qprog"><div class="tr"><div class="fl" style="width: 75%;"></div></div><span class="n">3 / 4</span></div>
+    <div style="margin-top: 24px;">
+      <span class="qe">lifestyle</span>
+      <h2 class="qq">where does the rest go, <i>mostly?</i></h2>
+      <div class="qw"><span class="wi">●</span><span><b>why we ask</b> — pick all that apply. we'll personalize tips to your actual life.</span></div>
+    </div>
+    <div class="chips">
+      <button class="chip on" data-chip>food &amp; dining</button>
+      <button class="chip on" data-chip>shopping</button>
+      <button class="chip" data-chip>travel</button>
+      <button class="chip on" data-chip>subscriptions</button>
+      <button class="chip" data-chip>fitness &amp; gym</button>
+      <button class="chip" data-chip>parties &amp; bars</button>
+      <button class="chip" data-chip>kids &amp; family</button>
+      <button class="chip" data-chip>parents support</button>
+      <button class="chip" data-chip>pets</button>
+      <button class="chip" data-chip>education</button>
+      <button class="chip" data-chip>weddings</button>
+    </div>
+    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-next>continue</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ Q4 IDENTITY ============ -->
+<section class="screen" data-screen="9">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gc" style="opacity:0.4;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-skip><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1 L10 10 M10 1 L1 10"/></svg></button></div>
+    <div class="qprog"><div class="tr"><div class="fl" style="width: 100%;"></div></div><span class="n">4 / 4</span></div>
+    <div style="margin-top: 24px;">
+      <span class="qe">about you</span>
+      <h2 class="qq">tell us a bit about <i>you.</i></h2>
+      <div class="qw"><span class="wi">●</span><span><b>why we ask</b> — to find the right peer group for your comparison.</span></div>
+    </div>
+    <div class="sgr">
+      <div><div class="sl">your age</div><div class="so"><button class="chip" data-chip>22–25</button><button class="chip on" data-chip>26–30</button><button class="chip" data-chip>31–35</button><button class="chip" data-chip>36–40</button></div></div>
+      <div><div class="sl">your city</div><div class="so"><button class="chip on" data-chip>metro</button><button class="chip" data-chip>tier-1</button><button class="chip" data-chip>tier-2</button><button class="chip" data-chip>tier-3+</button></div></div>
+      <div><div class="sl">life stage</div><div class="so"><button class="chip on" data-chip>single</button><button class="chip" data-chip>married</button><button class="chip" data-chip>married + kids</button></div></div>
+    </div>
+    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-next>calculate my score →</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ LOADING ============ -->
+<section class="screen" data-screen="10">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv" style="left:50%;top:35%;transform:translate(-50%,-50%);width:500px;height:500px;opacity:0.7;"></div><div class="glow ga" style="opacity:0.5;"></div><div class="grain"></div></div>
+  <div class="pad" style="justify-content: center;">
+    <div class="status" style="position:absolute;top:12px;left:30px;right:30px;"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="lring">
+      <svg viewBox="0 0 280 280" style="transform: rotate(-90deg);">
+        <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6B4CE6"/><stop offset="50%" stop-color="#FF5BA3"/><stop offset="100%" stop-color="#FFB938"/></linearGradient></defs>
+        <circle cx="140" cy="140" r="120" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
+        <circle id="lringStroke" cx="140" cy="140" r="120" fill="none" stroke="url(#lg)" stroke-width="3" stroke-linecap="round" stroke-dasharray="754" stroke-dashoffset="754" style="transform-origin: 50% 50%; animation: rotate 3s linear infinite;"/>
+      </svg>
+      <div class="ct"><div class="pct"><span id="lringPct">0</span><span style="font-size:36px;color:var(--text-muted);font-weight:600;">%</span></div></div>
+    </div>
+    <div class="lmsgs">
+      <div class="lmsg">finding patterns…</div>
+      <div class="lmsg">comparing with 30,000 people like you…</div>
+      <div class="lmsg">scoring your financial health…</div>
+      <div class="lmsg">almost there…</div>
+    </div>
+    <div class="lsub">we run 47 calculations to keep your score honest.</div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ SCORE REVEAL ============ -->
+<section class="screen" data-screen="11">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="left:50%;top:30%;transform:translate(-50%,-50%);width:600px;height:600px;opacity:0.7;"></div><div class="glow gv" style="opacity:0.6;"></div><div class="glow gp"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 7 H11 M11 7 L8 4 M11 7 L8 10"/></svg></button></div>
+    <div class="rev">
+      <div class="reb">your upscore</div>
+      <div class="rnum" id="rnum">0</div>
+      <div class="rof">out of 100</div>
+      <p class="rtag">you're <b>doing fine</b><br/>— but there's <i>clear</i> room to grow.</p>
+      <div class="rstrow">
+        <div class="rst"><div class="v">↑ 67%</div><div class="l">of peers</div></div>
+        <div class="rst"><div class="v">+22</div><div class="l">possible in 6 mo</div></div>
+      </div>
+    </div>
+    <div style="margin-top: 18px;"><button class="btn btn-v" data-next>show me where →</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ INSIGHTS ============ -->
+<section class="screen" data-screen="12">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv" style="opacity:0.4;"></div><div class="glow ga" style="opacity:0.3;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button></div>
+    <div style="margin-top: 16px;">
+      <span class="qe">3 insights for you</span>
+      <h2 class="qq" style="font-size: 24px; margin-top: 8px;">where you're <i>leaking</i> money.</h2>
+    </div>
+    <div class="ic-wrap" id="icWrap">
+      <div class="ic-track" id="icTrack">
+        <div class="icd">
+          <div class="ic-head"><span class="cb"><span class="dt" style="background: var(--orange);"></span> food &amp; dining</span><span class="dlt">↑ 50% vs peers</span></div>
+          <div class="yn">₹13,500<small>/mo</small></div>
+          <div class="yl">you spend</div>
+          <div class="cmp"><div class="yrs" style="width: 88%;"></div><div class="mk" style="left: 60%;"></div></div>
+          <div class="cleg"><span>₹0</span><span style="color: var(--green);">↓ peer avg ₹9,000</span><span>₹16k</span></div>
+          <div class="iln">cut food spend by <b>₹3,500/mo</b> and you'd be on par with peers — and gain <b>+8 points.</b></div>
+          <button class="ilnk">improve this <span>→</span></button>
+        </div>
+        <div class="icd">
+          <div class="ic-head"><span class="cb"><span class="dt" style="background: var(--pink);"></span> shopping</span><span class="dlt">↑ 28% vs peers</span></div>
+          <div class="yn">₹8,200<small>/mo</small></div>
+          <div class="yl">you spend</div>
+          <div class="cmp"><div class="yrs" style="width: 78%;"></div><div class="mk" style="left: 60%;"></div></div>
+          <div class="cleg"><span>₹0</span><span style="color: var(--green);">↓ peer avg ₹6,400</span><span>₹10k</span></div>
+          <div class="iln">you're on amazon <b>3x more</b> than peers — pause-to-buy nudges save users <b>₹2,000+ a month.</b></div>
+          <button class="ilnk">improve this <span>→</span></button>
+        </div>
+        <div class="icd">
+          <div class="ic-head"><span class="cb"><span class="dt" style="background: var(--green);"></span> savings</span><span class="dlt good">↑ 12% vs peers</span></div>
+          <div class="yn">₹6,000<small>/mo</small></div>
+          <div class="yl">you save</div>
+          <div class="cmp"><div class="yrs" style="width: 72%; background: linear-gradient(90deg, var(--green), var(--cyan));"></div><div class="mk" style="left: 64%;"></div></div>
+          <div class="cleg"><span>₹0</span><span style="color: var(--green);">peer avg ₹5,400</span><span>₹9k</span></div>
+          <div class="iln">you're already <b>above</b> peers here — push to <b>₹9,000/mo</b> and you unlock the savings champion mission.</div>
+          <button class="ilnk">push higher <span>→</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="ddots" id="icDots"><span class="ddt on"></span><span class="ddt"></span><span class="ddt"></span></div>
+    <div style="margin-top: 12px;"><button class="btn btn-v" data-next>see all 3 missions →</button></div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ MISSIONS ============ -->
+<section class="screen" data-screen="13">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow ga" style="opacity:0.4;top:50%;"></div><div class="glow gv" style="opacity:0.3;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button></div>
+    <div style="margin-top: 16px;">
+      <span class="qe">3 missions</span>
+      <h2 class="qq" style="font-size: 26px; margin-top: 8px;">pick one. <i>start small.</i> earn points + cash.</h2>
+    </div>
+    <div class="mlist">
+      <div class="ms"><div class="nc">1</div><div class="body"><h6>cut food spending by ₹3,500 this month</h6><div class="mt"><span class="mp sc">+8 points</span><span class="mp rw">₹500 cashback</span><span class="mp df">easy · 30 days</span></div></div><button class="acc">→</button></div>
+      <div class="ms"><div class="nc">2</div><div class="body"><h6>auto-save 5% of every salary credit</h6><div class="mt"><span class="mp sc">+12 points</span><span class="mp rw">₹1,000 cashback</span><span class="mp df">medium · 90 days</span></div></div><button class="acc">→</button></div>
+      <div class="ms"><div class="nc">3</div><div class="body"><h6>cancel 2 unused subscriptions</h6><div class="mt"><span class="mp sc">+4 points</span><span class="mp rw">₹300 cashback</span><span class="mp df">easy · this week</span></div></div><button class="acc">→</button></div>
+    </div>
+    <div style="margin-top: auto; padding-top: 14px;">
+      <button class="btn btn-v" data-next>accept all 3 missions</button>
+      <p style="text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 8px;">unlock <b style="color:var(--amber);">+24 points</b> &amp; <b style="color:var(--amber);">₹1,800 cashback</b> if you complete all three</p>
+    </div>
+  </div>
+  <div class="home"></div>
+</section>
+
+<!-- ============ PERMISSIONS ============ -->
+<section class="screen" data-screen="14">
+  <div class="atmos"><div class="grid-bg"></div><div class="glow gv" style="left:50%;top:25%;transform:translate(-50%,-50%);width:480px;height:480px;opacity:0.55;"></div><div class="glow gc" style="opacity:0.3;"></div><div class="grain"></div></div>
+  <div class="pad">
+    <div class="status"><span>9:41</span><span class="si"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.5"/><rect x="4.5" y="5" width="3" height="6" rx="0.5"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg><svg width="15" height="11" viewBox="0 0 15 11" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4 Q7.5 -1 14 4"/><path d="M3 6.5 Q7.5 3 12 6.5"/><circle cx="7.5" cy="9" r="1" fill="currentColor"/></svg><svg width="25" height="11" viewBox="0 0 25 11" fill="none"><rect x="0.5" y="0.5" width="21" height="10" rx="2.5" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="22.5" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor" opacity="0.5"/></svg></span></div>
+    <div class="head"><div class="wm"><span class="glyph"></span><span>UP<b>Score</b></span></div><button class="ib" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button></div>
+    <div class="psh"><svg viewBox="0 0 64 64" fill="none"><defs><linearGradient id="sh" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#6B4CE6"/></linearGradient></defs><path d="M32 4 L8 14 V32 C8 46 18 56 32 60 C46 56 56 46 56 32 V14 Z" fill="url(#sh)" opacity="0.95"/><path d="M22 32 L29 39 L43 25" fill="none" stroke="#0A0A0F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div style="text-align: center; margin-top: 4px;">
+      <span class="qe">last step</span>
+      <h2 class="qq" style="font-size: 26px; text-align: center; margin-top: 8px;">want this to <i>update itself?</i></h2>
+      <p class="sub" style="margin-top: 10px; text-align: center; max-width: 32ch; margin-left:auto; margin-right:auto;">link your bank or UPI so we can refresh your score automatically. or skip — it's truly optional.</p>
+    </div>
+    <div class="pps">
+      <div class="pp"><div class="dot">✓</div><div><div class="t">read-only — we can never move money</div><div class="s">via account aggregator (RBI-regulated)</div></div></div>
+      <div class="pp"><div class="dot">✓</div><div><div class="t">256-bit encrypted, never sold</div><div class="s">disconnect anytime in one tap</div></div></div>
+      <div class="pp"><div class="dot">✓</div><div><div class="t">your score refreshes monthly</div><div class="s">no more onboarding flows, ever</div></div></div>
+    </div>
+    <div style="margin-top: auto; padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+      <button class="btn btn-v" data-next>connect via UPI</button>
+      <button class="btn btn-g" data-next>i'll do it later</button>
+    </div>
+  </div>
+  <div class="home"></div>
+</section>
+
+</div>
+
+<script>
+  (function() {
+    const ticks = document.querySelector('.ticks-s1');
+    if (!ticks) return;
+    const count = 60, cx = 140, cy = 140, rOut = 132, rIn = 124;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      const ang = (i / count) * Math.PI * 2 - Math.PI / 2;
+      const x1 = cx + Math.cos(ang) * rIn, y1 = cy + Math.sin(ang) * rIn;
+      const x2 = cx + Math.cos(ang) * rOut, y2 = cy + Math.sin(ang) * rOut;
+      const major = i % 5 === 0;
+      html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-opacity="${major?0.5:0.18}" stroke-width="${major?1.5:1}" stroke-linecap="round"/>`;
+    }
+    ticks.innerHTML = html;
+  })();
+
+  const screens = document.querySelectorAll('.screen');
+  let current = 0;
+  const TOTAL = screens.length;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // shared mutable state used across screens
+  const state = {
+    income: 75000,
+    fixedPct: 35
+  };
+
+  function fmtINR(n) { return n.toLocaleString('en-IN'); }
+
+  // ---------- screen show + lifecycle hooks ----------
+  function show(i) {
+    if (i < 0 || i >= TOTAL) return;
+    const prev = current;
+    screens.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    current = i;
+    document.querySelectorAll('.picker button').forEach(b => b.classList.toggle('on', parseInt(b.dataset.i) === i));
+    if (prev !== i) onLeave(prev);
+    onEnter(i);
+  }
+
+  // ---------- click + keyboard nav ----------
+  document.querySelectorAll('.picker button').forEach(b => {
+    b.addEventListener('click', () => show(parseInt(b.dataset.i)));
+  });
+
+  document.addEventListener('click', (e) => {
+    const next = e.target.closest('[data-next]');
+    const prev = e.target.closest('[data-prev]');
+    const skip = e.target.closest('[data-skip]');
+    if (next) { killStoryTimer(); show(Math.min(current + 1, TOTAL - 1)); }
+    else if (prev) { killStoryTimer(); show(Math.max(current - 1, 0)); }
+    else if (skip) { killStoryTimer(); show(5); }
+  });
+
+  document.querySelectorAll('[data-chip]').forEach(c => {
+    c.addEventListener('click', (e) => { e.stopPropagation(); c.classList.toggle('on'); });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { killStoryTimer(); show(Math.min(current + 1, TOTAL - 1)); }
+    if (e.key === 'ArrowLeft')  { killStoryTimer(); show(Math.max(current - 1, 0)); }
+  });
+
+  document.querySelector('.picker button[data-i="0"]').classList.add('on');
+
+  // ---------- hash deep-link ----------
+  function readHash() {
+    const m = location.hash.match(/s=(\d+)/);
+    if (m) show(parseInt(m[1]));
+  }
+
+  // ============================================================
+  // 1. INTERACTIVE SLIDERS (Q1 income, Q2 fixed)
+  // ============================================================
+  function setSliderValue(slider, raw) {
+    const min = +slider.dataset.min, max = +slider.dataset.max, step = +slider.dataset.step;
+    let v = Math.max(min, Math.min(max, raw));
+    v = Math.round(v / step) * step;
+    slider.dataset.value = v;
+    const pct = ((v - min) / (max - min)) * 100;
+    slider.querySelector('.sfill').style.width = pct + '%';
+    slider.querySelector('.sthumb').style.left = pct + '%';
+    const kind = slider.dataset.slider;
+    if (kind === 'income') {
+      state.income = v;
+      const out = document.querySelector('[data-income-num]');
+      if (out) out.textContent = fmtINR(v);
+      // also keep Q2 derived line in sync if rendered
+      updateFixedDerived();
+    } else if (kind === 'fixed') {
+      state.fixedPct = v;
+      const out = document.querySelector('[data-fixed-num]');
+      if (out) out.textContent = v;
+      updateFixedDerived();
+    }
+  }
+  function updateFixedDerived() {
+    const el = document.querySelector('[data-fixed-derived]');
+    if (!el) return;
+    const amt = Math.round(state.income * state.fixedPct / 100);
+    el.textContent = `~ ₹${fmtINR(amt)} of your ₹${fmtINR(state.income)} / month`;
+  }
+  function bindSlider(slider) {
+    setSliderValue(slider, +slider.dataset.value);
+    let dragging = false;
+    function pickValue(clientX) {
+      const r = slider.getBoundingClientRect();
+      const t = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      const min = +slider.dataset.min, max = +slider.dataset.max;
+      setSliderValue(slider, min + t * (max - min));
+    }
+    slider.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      slider.classList.add('dragging');
+      slider.setPointerCapture(e.pointerId);
+      pickValue(e.clientX);
+      e.stopPropagation();
+    });
+    slider.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      pickValue(e.clientX);
+    });
+    const stop = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      slider.classList.remove('dragging');
+      try { slider.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    slider.addEventListener('pointerup', stop);
+    slider.addEventListener('pointercancel', stop);
+    // prevent zone click-to-advance from swallowing slider clicks
+    slider.addEventListener('click', (e) => e.stopPropagation());
+  }
+  document.querySelectorAll('.stk[data-slider]').forEach(bindSlider);
+
+  // ============================================================
+  // 2. STORY AUTO-PROGRESS (S1–S5 = screens 0–4)
+  // ============================================================
+  let storyTimer = null;
+  let storyRaf = null;
+  let storyHoldTimer = null;
+  let storyPaused = false;
+  const STORY_DUR = reduceMotion ? 0 : 6000;
+
+  function killStoryTimer() {
+    if (storyTimer) { clearTimeout(storyTimer); storyTimer = null; }
+    if (storyRaf) { cancelAnimationFrame(storyRaf); storyRaf = null; }
+    if (storyHoldTimer) { clearTimeout(storyHoldTimer); storyHoldTimer = null; }
+    storyPaused = false;
+  }
+
+  function startStoryTimer(idx) {
+    killStoryTimer();
+    if (idx > 4) return;
+    if (idx === 4) return; // S5 has explicit CTA
+    const screen = screens[idx];
+    const fill = screen.querySelector('.seg.active .fill');
+    if (!fill) return;
+    const start = performance.now();
+    let pausedAt = 0;
+    let pauseAccum = 0;
+    function tick(now) {
+      if (storyPaused) {
+        if (!pausedAt) pausedAt = now;
+        storyRaf = requestAnimationFrame(tick);
+        return;
+      } else if (pausedAt) {
+        pauseAccum += now - pausedAt;
+        pausedAt = 0;
+      }
+      const t = Math.min(1, (now - start - pauseAccum) / STORY_DUR);
+      fill.style.width = (t * 100) + '%';
+      if (t < 1) {
+        storyRaf = requestAnimationFrame(tick);
+      } else {
+        storyRaf = null;
+        // auto-advance only if still on this screen
+        if (current === idx) show(idx + 1);
+      }
+    }
+    if (STORY_DUR === 0) {
+      fill.style.width = '100%';
+      return;
+    }
+    storyRaf = requestAnimationFrame(tick);
+  }
+
+  // long-press hold (≥500ms) to pause story progression. taps still advance via [data-next/prev].
+  function bindStoryHold(idx) {
+    const screen = screens[idx];
+    screen.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.skip, button')) return;
+      storyHoldTimer = setTimeout(() => { storyPaused = true; }, 500);
+    });
+    const release = () => {
+      if (storyHoldTimer) { clearTimeout(storyHoldTimer); storyHoldTimer = null; }
+      storyPaused = false;
+    };
+    screen.addEventListener('pointerup', release);
+    screen.addEventListener('pointercancel', release);
+    screen.addEventListener('pointerleave', release);
+  }
+  for (let i = 0; i <= 4; i++) bindStoryHold(i);
+
+  // ============================================================
+  // 3. LOADING AUTO-ADVANCE (screen 10)
+  // ============================================================
+  let loaderRaf = null;
+  function killLoader() { if (loaderRaf) { cancelAnimationFrame(loaderRaf); loaderRaf = null; } }
+  function startLoader() {
+    killLoader();
+    const stroke = document.getElementById('lringStroke');
+    const pctEl = document.getElementById('lringPct');
+    if (!stroke || !pctEl) return;
+    const DASH = 754;
+    const DUR = reduceMotion ? 0 : 8000;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / Math.max(1, DUR));
+      const pct = Math.round(t * 100);
+      pctEl.textContent = pct;
+      stroke.setAttribute('stroke-dashoffset', String(DASH * (1 - t)));
+      if (t < 1) {
+        loaderRaf = requestAnimationFrame(tick);
+      } else {
+        loaderRaf = null;
+        if (current === 10) show(11);
+      }
+    }
+    if (DUR === 0) {
+      pctEl.textContent = 100;
+      stroke.setAttribute('stroke-dashoffset', '0');
+      if (current === 10) show(11);
+      return;
+    }
+    loaderRaf = requestAnimationFrame(tick);
+  }
+
+  // ============================================================
+  // 4. SCORE COUNT-UP (screen 11)
+  // ============================================================
+  let scoreRaf = null;
+  function killScore() { if (scoreRaf) { cancelAnimationFrame(scoreRaf); scoreRaf = null; } }
+  function startScoreCountUp() {
+    killScore();
+    const el = document.getElementById('rnum');
+    if (!el) return;
+    const TARGET = 62;
+    const DUR = reduceMotion ? 0 : 1500;
+    const start = performance.now();
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+    function tick(now) {
+      const t = Math.min(1, (now - start) / Math.max(1, DUR));
+      el.textContent = Math.round(easeOut(t) * TARGET);
+      if (t < 1) scoreRaf = requestAnimationFrame(tick);
+      else scoreRaf = null;
+    }
+    if (DUR === 0) { el.textContent = TARGET; return; }
+    // restart pop animation
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = '';
+    scoreRaf = requestAnimationFrame(tick);
+  }
+
+  // ============================================================
+  // 5. INSIGHT DECK SWIPE (screen 12)
+  // ============================================================
+  const icWrap = document.getElementById('icWrap');
+  const icTrack = document.getElementById('icTrack');
+  const icDots = document.getElementById('icDots');
+  let icIdx = 0;
+  let icDragX = 0, icStartX = 0, icDragging = false, icWidth = 0, icPointerId = null;
+
+  function icApply(animate) {
+    if (!icTrack || !icWrap) return;
+    icWidth = icWrap.clientWidth;
+    const offset = -icIdx * (icWidth + 14) + icDragX; // 14 = gap
+    icTrack.style.transform = `translate3d(${offset}px,0,0)`;
+    if (icDots) icDots.querySelectorAll('.ddt').forEach((d, i) => d.classList.toggle('on', i === icIdx));
+  }
+  if (icWrap && icTrack) {
+    const cards = icTrack.querySelectorAll('.icd');
+    icWrap.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.ilnk, button')) return;
+      icDragging = true;
+      icStartX = e.clientX;
+      icDragX = 0;
+      icPointerId = e.pointerId;
+      icTrack.classList.add('dragging');
+      icWrap.setPointerCapture(e.pointerId);
+    });
+    icWrap.addEventListener('pointermove', (e) => {
+      if (!icDragging) return;
+      icDragX = e.clientX - icStartX;
+      // resistance at edges
+      if ((icIdx === 0 && icDragX > 0) || (icIdx === cards.length - 1 && icDragX < 0)) icDragX *= 0.35;
+      icApply(false);
+    });
+    const icEnd = (e) => {
+      if (!icDragging) return;
+      icDragging = false;
+      icTrack.classList.remove('dragging');
+      try { icWrap.releasePointerCapture(icPointerId); } catch (_) {}
+      const threshold = icWidth * 0.18;
+      if (icDragX < -threshold && icIdx < cards.length - 1) icIdx++;
+      else if (icDragX > threshold && icIdx > 0) icIdx--;
+      icDragX = 0;
+      icApply(true);
+    };
+    icWrap.addEventListener('pointerup', icEnd);
+    icWrap.addEventListener('pointercancel', icEnd);
+    window.addEventListener('resize', () => icApply(false));
+  }
+
+  // ============================================================
+  // lifecycle dispatch
+  // ============================================================
+  function onLeave(idx) {
+    if (idx <= 4) killStoryTimer();
+    if (idx === 10) killLoader();
+    if (idx === 11) killScore();
+  }
+  function onEnter(idx) {
+    if (idx >= 0 && idx <= 4) startStoryTimer(idx);
+    if (idx === 10) startLoader();
+    if (idx === 11) startScoreCountUp();
+    if (idx === 12) { icIdx = 0; icDragX = 0; requestAnimationFrame(() => icApply(false)); }
+  }
+
+  readHash();
+  window.addEventListener('hashchange', readHash);
+  // kick lifecycle for the initial active screen
+  onEnter(current);
+</script>
+
+</body>
+</html>
