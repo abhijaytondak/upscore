@@ -298,6 +298,12 @@
   @media (max-width: 900px) {
     .picker { display: none !important; }
   }
+  /* hide fake iOS status bar on real phones (real device chrome takes over) */
+  @media (max-width: 430px) {
+    .status { display: none !important; }
+    .home { display: none !important; }
+    .pad { padding-top: 20px; }
+  }
 </style>
 </head>
 <body>
