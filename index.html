@@ -95,7 +95,7 @@
   .sub { color: var(--text-muted); font-size: 14.5px; line-height: 1.5; }
   .eyebrow { color: var(--text-faint); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 500; }
 
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 22px; border-radius: 999px; border: 0; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; transition: transform .15s, box-shadow .2s; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 22px; border-radius: 999px; border: 0; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; transition: transform .15s, box-shadow .2s; touch-action: manipulation; }
   .btn-v { background: var(--violet); color: #fff; box-shadow: 0 12px 40px -10px rgba(107,76,230,0.7); }
   .btn-v:hover { background: #7d5ff0; transform: translateY(-1px); }
   .btn-g { background: rgba(255,255,255,0.04); color: var(--text); border: 1px solid var(--border); }
@@ -778,7 +778,7 @@
       <div><div class="sl">your city</div><div class="so"><button class="chip on" data-chip>metro</button><button class="chip" data-chip>tier-1</button><button class="chip" data-chip>tier-2</button><button class="chip" data-chip>tier-3+</button></div></div>
       <div><div class="sl">life stage</div><div class="so"><button class="chip on" data-chip>single</button><button class="chip" data-chip>married</button><button class="chip" data-chip>married + kids</button></div></div>
     </div>
-    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-next>calculate my score →</button></div>
+    <div class="qf"><button class="ib bk" data-prev><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11 L4 7 L9 3"/></svg></button><button class="btn btn-v" style="flex:1;" data-goto="10">calculate my score →</button></div>
   </div>
   <div class="home"></div>
 </section>
